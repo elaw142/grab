@@ -6,6 +6,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
+RUN mkdir -p /root/.config/yt-dlp && \
+    echo '--js-runtimes node' > /root/.config/yt-dlp/config
+
 COPY . .
 
 CMD ["python", "app.py"]
