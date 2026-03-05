@@ -35,6 +35,8 @@ def convert_to_piped(url):
 
 def do_download(job_id, url, fmt):
     job = jobs[job_id]
+    url = convert_to_piped(url)
+    print(f"DEBUG URL: {url}", flush=True)
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
 
     url = convert_to_piped(url)
