@@ -14,6 +14,7 @@ jobs = {}
 
 FORMATS = ["mp3", "wav", "flac", "m4a", "ogg"]
 
+
 def cleanup_file(path, delay=300):
     def delete():
         time.sleep(delay)
@@ -21,10 +22,23 @@ def cleanup_file(path, delay=300):
             os.remove(path)
     threading.Thread(target=delete, daemon=True).start()
 
+
+def convert_to_piped(url):
+    import re
+    # Handle youtu.be short links
+    url = re.sub(r'https?://youtu\.be/([a-zA-Z0-9_-]+)',
+                 r'https://piped.video/watch?v=\1', url)
+    # Handle youtube.com links
+    url = re.sub(r'https?://(www\.)?youtube\.com/',
+                 r'https://piped.video/', url)
+    return url
+
+
 def do_download(job_id, url, fmt):
     job = jobs[job_id]
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
 
+    url = convert_to_piped(url)
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": output_path + ".%(ext)s",
@@ -51,9 +65,11 @@ def do_download(job_id, url, fmt):
         job["status"] = "error"
         job["error"] = str(e)
 
+
 @app.route("/")
 def index():
     return render_template("index.html", formats=FORMATS)
+
 
 @app.route("/api/download", methods=["POST"])
 def download():
@@ -69,10 +85,12 @@ def download():
     job_id = str(uuid.uuid4())
     jobs[job_id] = {"status": "processing"}
 
-    thread = threading.Thread(target=do_download, args=(job_id, url, fmt), daemon=True)
+    thread = threading.Thread(
+        target=do_download, args=(job_id, url, fmt), daemon=True)
     thread.start()
 
     return jsonify({"job_id": job_id})
+
 
 @app.route("/api/status/<job_id>")
 def status(job_id):
@@ -85,6 +103,7 @@ def status(job_id):
         return jsonify({"status": "error", "error": job["error"]})
     return jsonify({"status": "processing"})
 
+
 @app.route("/api/file/<job_id>")
 def get_file(job_id):
     job = jobs.get(job_id)
@@ -95,6 +114,7 @@ def get_file(job_id):
         as_attachment=True,
         download_name=f"{job['title']}.{job['fmt']}"
     )
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5008, debug=False)
