@@ -25,12 +25,11 @@ def cleanup_file(path, delay=300):
 
 def convert_to_piped(url):
     import re
-    # Handle youtu.be short links
-    url = re.sub(r'https?://youtu\.be/([a-zA-Z0-9_-]+)',
-                 r'https://piped.video/watch?v=\1', url)
-    # Handle youtube.com links
-    url = re.sub(r'https?://(www\.)?youtube\.com/',
-                 r'https://piped.video/', url)
+    match = re.search(
+        r'(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]+)', url)
+    if match:
+        video_id = match.group(1)
+        return f"https://piped.video/watch?v={video_id}"
     return url
 
 
@@ -48,6 +47,7 @@ def do_download(job_id, url, fmt):
         }],
         "quiet": True,
         "no_warnings": True,
+        "extractor_args": {"piped": {"instance": ["https://piped.video"]}},
     }
 
     try:
