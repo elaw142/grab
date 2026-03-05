@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>grab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c0c0c;
+      --surface: #141414;
+      --border: #222;
+      --text: #e8e8e8;
+      --muted: #555;
+      --accent: #c8f542;
+      --error: #ff4d4d;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 300;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    header {
+      margin-bottom: 3rem;
+    }
+
+    .wordmark {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: lowercase;
+    }
+
+    .tagline {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      margin-top: 0.3rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2rem;
+    }
+
+    .field {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      padding: 0.75rem 1rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--muted);
+    }
+
+    .format-grid {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .fmt-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      padding: 0.4rem 0.85rem;
+      cursor: pointer;
+      transition: all 0.1s;
+      text-transform: uppercase;
+    }
+
+    .fmt-btn:hover {
+      border-color: #444;
+      color: var(--text);
+    }
+
+    .fmt-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0c0c0c;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      color: #0c0c0c;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-top: 0.5rem;
+    }
+
+    .submit-btn:hover { opacity: 0.85; }
+    .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .status-area {
+      margin-top: 1.5rem;
+      min-height: 2rem;
+    }
+
+    .status-line {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .status-line.error { color: var(--error); }
+    .status-line.done { color: var(--accent); }
+
+    .spinner {
+      width: 12px;
+      height: 12px;
+      border: 1.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .download-btn {
+      display: inline-block;
+      margin-top: 1rem;
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.6rem 1.2rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .download-btn:hover {
+      background: var(--accent);
+      color: #0c0c0c;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="wordmark">grab</div>
+      <div class="tagline">// youtube → audio</div>
+    </header>
+
+    <div class="card">
+      <div class="field">
+        <label>URL</label>
+        <input type="text" id="url-input" placeholder="https://youtube.com/watch?v=..." />
+      </div>
+
+      <div class="field">
+        <label>Format</label>
+        <div class="format-grid" id="format-grid">
+          {% for fmt in formats %}
+          <button class="fmt-btn {% if fmt == 'mp3' %}active{% endif %}" data-fmt="{{ fmt }}">{{ fmt }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <button class="submit-btn" id="grab-btn">grab</button>
+
+      <div class="status-area" id="status-area"></div>
+    </div>
+
+    <footer>files auto-delete after 5 minutes</footer>
+  </div>
+
+  <script>
+    let selectedFormat = 'mp3';
+    let pollInterval = null;
+
+    document.querySelectorAll('.fmt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedFormat = btn.dataset.fmt;
+      });
+    });
+
+    document.getElementById('grab-btn').addEventListener('click', startDownload);
+    document.getElementById('url-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') startDownload();
+    });
+
+    function setStatus(html, cls = '') {
+      const area = document.getElementById('status-area');
+      area.innerHTML = `<div class="status-line ${cls}">${html}</div>`;
+    }
+
+    function startDownload() {
+      const url = document.getElementById('url-input').value.trim();
+      if (!url) return;
+
+      if (pollInterval) clearInterval(pollInterval);
+
+      const btn = document.getElementById('grab-btn');
+      btn.disabled = true;
+      setStatus('<div class="spinner"></div> fetching...');
+
+      fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, format: selectedFormat })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          setStatus(data.error, 'error');
+          btn.disabled = false;
+          return;
+        }
+        pollStatus(data.job_id);
+      })
+      .catch(() => {
+        setStatus('request failed', 'error');
+        btn.disabled = false;
+      });
+    }
+
+    function pollStatus(jobId) {
+      pollInterval = setInterval(() => {
+        fetch(`/api/status/${jobId}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.status === 'processing') {
+              setStatus('<div class="spinner"></div> processing...');
+            } else if (data.status === 'done') {
+              clearInterval(pollInterval);
+              const title = data.title || 'audio';
+              const area = document.getElementById('status-area');
+              area.innerHTML = `
+                <div class="status-line done">✓ ${escHtml(title)}</div>
+                <a class="download-btn" href="/api/file/${jobId}" download>↓ download ${data.format}</a>
+              `;
+              document.getElementById('grab-btn').disabled = false;
+            } else if (data.status === 'error') {
+              clearInterval(pollInterval);
+              setStatus(data.error || 'something went wrong', 'error');
+              document.getElementById('grab-btn').disabled = false;
+            }
+          });
+      }, 1500);
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

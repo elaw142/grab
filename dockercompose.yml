@@ -1,0 +1,13 @@
+services:
+  grab:
+    build: .
+    container_name: grab
+    restart: unless-stopped
+    ports:
+      - "5008:5008"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
