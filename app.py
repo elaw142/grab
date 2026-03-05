@@ -28,7 +28,7 @@ def do_download(job_id, url, fmt):
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
 
     ydl_opts = {
-        "format": "bestaudio/best",
+        "format": "bestaudio",
         "outtmpl": output_path + ".%(ext)s",
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
