@@ -37,6 +37,8 @@ def do_download(job_id, url, fmt):
         "quiet": True,
         "no_warnings": True,
         "cookiefile": "/app/cookies.txt",
+        "extractor_args": {"youtube": {"player_client": ["web"]}},
+        "js_runtimes": ["node"],
     }
 
     try:
