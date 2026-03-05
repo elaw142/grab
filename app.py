@@ -23,23 +23,10 @@ def cleanup_file(path, delay=300):
     threading.Thread(target=delete, daemon=True).start()
 
 
-def convert_to_piped(url):
-    import re
-    match = re.search(
-        r'(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]+)', url)
-    if match:
-        video_id = match.group(1)
-        return f"https://piped.video/watch?v={video_id}"
-    return url
-
-
 def do_download(job_id, url, fmt):
     job = jobs[job_id]
-    url = convert_to_piped(url)
-    print(f"DEBUG URL: {url}", flush=True)
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
 
-    url = convert_to_piped(url)
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": output_path + ".%(ext)s",
@@ -49,7 +36,7 @@ def do_download(job_id, url, fmt):
         }],
         "quiet": True,
         "no_warnings": True,
-        "extractor_args": {"piped": {"instance": ["https://piped.video"]}},
+        "cookiefile": "/app/cookies.txt",
     }
 
     try:
