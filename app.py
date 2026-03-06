@@ -32,7 +32,8 @@ def do_download(job_id, url, fmt):
         result = subprocess.run([
             "/usr/local/bin/yt-dlp",
             "--cookies", "/app/cookies.txt",
-            "--js-runtimes", "node",
+            "--js-runtimes", "node:/usr/bin/node",
+            "--proxy", "http://nlfsdzqd:gea1o50c3mmp@142.111.67.146:5611",
             "-f", "bestaudio",
             "-x", "--audio-format", fmt,
             "-o", output_path + ".%(ext)s",
