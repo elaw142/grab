@@ -35,6 +35,7 @@ def do_download(job_id, url, fmt):
             "preferredcodec": fmt,
         }],
         "cookiefile": "/app/cookies.txt",
+        "js_runtimes": ["node:/usr/bin/node"],
     }
 
     try:
