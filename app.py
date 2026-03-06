@@ -29,6 +29,19 @@ def do_download(job_id, url, fmt):
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
 
     try:
+        # Get title first
+        title_result = subprocess.run([
+            "/usr/local/bin/yt-dlp",
+            "--cookies", "/app/cookies.txt",
+            "--js-runtimes", "node:/usr/bin/node",
+            "--proxy", "http://nlfsdzqd:gea1o50c3mmp@142.111.67.146:5611",
+            "--get-title",
+            "--no-playlist",
+            url
+        ], capture_output=True, text=True)
+
+        title = title_result.stdout.strip() or "audio"
+
         result = subprocess.run([
             "/usr/local/bin/yt-dlp",
             "--cookies", "/app/cookies.txt",
@@ -46,7 +59,6 @@ def do_download(job_id, url, fmt):
             job["error"] = result.stderr.split('\n')[-2]
             return
 
-        # Find the output file
         import glob
         files = glob.glob(output_path + f".{fmt}")
         if not files:
@@ -57,27 +69,6 @@ def do_download(job_id, url, fmt):
             job["status"] = "error"
             job["error"] = "Output file not found"
             return
-
-        # Get title first
-        title_result = subprocess.run([
-            "/usr/local/bin/yt-dlp",
-            "--cookies", "/app/cookies.txt",
-            "--js-runtimes", "node:/usr/bin/node",
-            "--proxy", "http://nlfsdzqd:gea1o50c3mmp@142.111.67.146:5611",
-            "--get-title",
-            "--no-playlist",
-            url
-        ], capture_output=True, text=True)
-
-        title = title_result.stdout.strip() or "audio"
-
-        for line in result.stdout.split('\n'):
-            print("STDOUT:", result.stdout, flush=True)
-            if '[ExtractAudio] Destination:' in line:
-                # Extract filename without extension
-                filename = line.split('Destination:')[-1].strip()
-                title = os.path.basename(filename).rsplit('.', 1)[0]
-                break
 
         job["status"] = "done"
         job["path"] = final_path
