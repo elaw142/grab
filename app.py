@@ -58,8 +58,19 @@ def do_download(job_id, url, fmt):
             job["error"] = "Output file not found"
             return
 
-        # Extract title from stdout
-        title = "audio"
+        # Get title first
+        title_result = subprocess.run([
+            "/usr/local/bin/yt-dlp",
+            "--cookies", "/app/cookies.txt",
+            "--js-runtimes", "node:/usr/bin/node",
+            "--proxy", "http://nlfsdzqd:gea1o50c3mmp@142.111.67.146:5611",
+            "--get-title",
+            "--no-playlist",
+            url
+        ], capture_output=True, text=True)
+
+        title = title_result.stdout.strip() or "audio"
+
         for line in result.stdout.split('\n'):
             print("STDOUT:", result.stdout, flush=True)
             if '[ExtractAudio] Destination:' in line:
