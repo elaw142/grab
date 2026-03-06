@@ -1,9 +1,10 @@
 from flask import Flask, request, jsonify, send_file, render_template
-import yt_dlp
 import os
 import uuid
 import threading
 import time
+import subprocess
+import glob
 
 app = Flask(__name__)
 
@@ -27,33 +28,51 @@ def do_download(job_id, url, fmt):
     job = jobs[job_id]
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
 
-    ydl_opts = {
-        "format": "140/251/250/249",
-        "outtmpl": output_path + ".%(ext)s",
-        "postprocessors": [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": fmt,
-        }],
-        "cookiefile": "/app/cookies.txt",
-        "js_runtimes": {"node": {"path": "/usr/bin/node"}},
-    }
-
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            title = info.get("title", "audio")
+        result = subprocess.run([
+            "yt-dlp",
+            "--cookies", "/app/cookies.txt",
+            "--js-runtimes", "node",
+            "-f", "bestaudio",
+            "-x", "--audio-format", fmt,
+            "-o", output_path + ".%(ext)s",
+            "--no-playlist",
+            url
+        ], capture_output=True, text=True)
 
-        final_path = output_path + f".{fmt}"
+        if result.returncode != 0:
+            job["status"] = "error"
+            job["error"] = result.stderr.split('\n')[-2]
+            return
+
+        # Find the output file
+        import glob
+        files = glob.glob(output_path + f".{fmt}")
+        if not files:
+            files = glob.glob(output_path + ".*")
+
+        final_path = files[0] if files else None
+        if not final_path:
+            job["status"] = "error"
+            job["error"] = "Output file not found"
+            return
+
+        # Extract title from stdout
+        title = "audio"
+        for line in result.stderr.split('\n'):
+            if "Destination:" in line:
+                title = line.split("/")[-1].rsplit(".", 1)[0]
+                break
+
         job["status"] = "done"
         job["path"] = final_path
         job["title"] = title
         job["fmt"] = fmt
         cleanup_file(final_path)
+
     except Exception as e:
-        import traceback
         job["status"] = "error"
         job["error"] = str(e)
-        print(traceback.format_exc(), flush=True)
 
 
 @app.route("/")
