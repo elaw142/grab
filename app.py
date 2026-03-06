@@ -61,6 +61,7 @@ def do_download(job_id, url, fmt):
         # Extract title from stdout
         title = "audio"
         for line in result.stdout.split('\n'):
+            print("STDOUT:", result.stdout, flush=True)
             if '[ExtractAudio] Destination:' in line:
                 # Extract filename without extension
                 filename = line.split('Destination:')[-1].strip()
