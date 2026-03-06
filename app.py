@@ -28,16 +28,15 @@ def do_download(job_id, url, fmt):
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
 
     ydl_opts = {
-        "format": "bestaudio/140/251",
+        "format": "140/251/250/249",
         "outtmpl": output_path + ".%(ext)s",
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": fmt,
         }],
+        "cookiefile": "/app/cookies.txt",
         "quiet": True,
         "no_warnings": True,
-        "cookiefile": "/app/cookies.txt",
-        "extractor_args": {"youtube": {"player_client": ["tv_downgraded", "web"]}},
     }
 
     try:
