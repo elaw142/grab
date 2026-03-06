@@ -35,8 +35,6 @@ def do_download(job_id, url, fmt):
             "preferredcodec": fmt,
         }],
         "cookiefile": "/app/cookies.txt",
-        "quiet": True,
-        "no_warnings": True,
     }
 
     try:
@@ -51,8 +49,10 @@ def do_download(job_id, url, fmt):
         job["fmt"] = fmt
         cleanup_file(final_path)
     except Exception as e:
+        import traceback
         job["status"] = "error"
         job["error"] = str(e)
+        print(traceback.format_exc(), flush=True)
 
 
 @app.route("/")
