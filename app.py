@@ -60,9 +60,11 @@ def do_download(job_id, url, fmt):
 
         # Extract title from stdout
         title = "audio"
-        for line in result.stderr.split('\n'):
-            if "Destination:" in line:
-                title = line.split("/")[-1].rsplit(".", 1)[0]
+        for line in result.stdout.split('\n'):
+            if '[ExtractAudio] Destination:' in line:
+                # Extract filename without extension
+                filename = line.split('Destination:')[-1].strip()
+                title = os.path.basename(filename).rsplit('.', 1)[0]
                 break
 
         job["status"] = "done"
