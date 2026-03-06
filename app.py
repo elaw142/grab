@@ -30,7 +30,7 @@ def do_download(job_id, url, fmt):
 
     try:
         result = subprocess.run([
-            "yt-dlp",
+            "/usr/local/bin/yt-dlp",
             "--cookies", "/app/cookies.txt",
             "--js-runtimes", "node",
             "-f", "bestaudio",
