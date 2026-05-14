@@ -26,7 +26,7 @@ Any site supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp) — including Y
 
 - Docker
 - A `cookies.txt` file exported from your browser while logged into YouTube (Netscape format)
-- A residential proxy (required for YouTube on server IPs)
+- A residential proxy for YouTube on server IPs, configured with `YTDLP_PROXY`
 
 ### Running
 
@@ -34,6 +34,7 @@ Any site supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp) — including Y
 git clone https://github.com/elaw142/Grab.git
 cd Grab
 # Add your cookies.txt to the project root
+# Optional: copy .env.example to .env and set YTDLP_PROXY
 docker compose up -d --build
 ```
 
@@ -56,6 +57,27 @@ yt-dlp --cookies cookies.txt --skip-download "https://www.youtube.com/watch?v=dQ
 ```
 
 Re-export cookies from your browser and replace `cookies.txt` on the server when they expire.
+
+To refresh `yt-dlp` inside the Docker image, rebuild without cache:
+
+```bash
+docker compose build --no-cache grab
+docker compose up -d
+```
+
+## Proxy Configuration
+
+`yt-dlp` proxy settings are controlled by the `YTDLP_PROXY` environment variable.
+
+```bash
+YTDLP_PROXY=http://username:password@proxy.example.com:8080
+```
+
+Leave `YTDLP_PROXY` empty for a direct connection. If you see `407 Proxy Authentication Required`, the proxy server rejected the configured username, password, host, or port. Update `.env` with valid proxy credentials, then rebuild/restart the container:
+
+```bash
+docker compose up -d --build
+```
 
 ## Deployment
 

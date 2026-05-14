@@ -11,9 +11,35 @@ app = Flask(__name__)
 DOWNLOAD_DIR = "/tmp/grab"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+YTDLP_BIN = os.environ.get("YTDLP_BIN", "/usr/local/bin/yt-dlp")
+COOKIES_FILE = os.environ.get("COOKIES_FILE", "/app/cookies.txt")
+JS_RUNTIME = os.environ.get("YTDLP_JS_RUNTIME", "node:/usr/bin/node")
+YTDLP_PROXY = os.environ.get("YTDLP_PROXY")
+DIRECT_PROXY_VALUES = {"", "none", "direct", "off", "false", "0"}
+
 jobs = {}
 
 FORMATS = ["mp3", "wav", "flac", "m4a", "ogg"]
+
+
+def build_ytdlp_cmd(*args):
+    cmd = [YTDLP_BIN]
+
+    if COOKIES_FILE:
+        cmd.extend(["--cookies", COOKIES_FILE])
+    if JS_RUNTIME:
+        cmd.extend(["--js-runtimes", JS_RUNTIME])
+    if YTDLP_PROXY is not None:
+        proxy = YTDLP_PROXY.strip()
+        cmd.extend(["--proxy", "" if proxy.lower() in DIRECT_PROXY_VALUES else proxy])
+
+    cmd.extend(args)
+    return cmd
+
+
+def last_stderr_line(result):
+    lines = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+    return lines[-1] if lines else "Download failed"
 
 
 def cleanup_file(path, delay=300):
@@ -30,33 +56,25 @@ def do_download(job_id, url, fmt):
 
     try:
         # Get title first
-        title_result = subprocess.run([
-            "/usr/local/bin/yt-dlp",
-            "--cookies", "/app/cookies.txt",
-            "--js-runtimes", "node:/usr/bin/node",
-            "--proxy", "http://nlfsdzqd:gea1o50c3mmp@142.111.67.146:5611",
+        title_result = subprocess.run(build_ytdlp_cmd(
             "--get-title",
             "--no-playlist",
             url
-        ], capture_output=True, text=True)
+        ), capture_output=True, text=True)
 
         title = title_result.stdout.strip() or "audio"
 
-        result = subprocess.run([
-            "/usr/local/bin/yt-dlp",
-            "--cookies", "/app/cookies.txt",
-            "--js-runtimes", "node:/usr/bin/node",
-            "--proxy", "http://nlfsdzqd:gea1o50c3mmp@142.111.67.146:5611",
+        result = subprocess.run(build_ytdlp_cmd(
             "-f", "bestaudio",
             "-x", "--audio-format", fmt,
             "-o", output_path + ".%(ext)s",
             "--no-playlist",
             url
-        ], capture_output=True, text=True)
+        ), capture_output=True, text=True)
 
         if result.returncode != 0:
             job["status"] = "error"
-            job["error"] = result.stderr.split('\n')[-2]
+            job["error"] = last_stderr_line(result)
             return
 
         import glob

@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "5008:5008"
+    environment:
+      YTDLP_PROXY: ${YTDLP_PROXY:-}
     networks:
       - web
 
