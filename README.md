@@ -67,8 +67,10 @@ You can also upload a local cookie export through GitHub Actions without committ
 If `yt-dlp` is installed locally, the same script can try to refresh cookies directly from your browser profile before deploying:
 
 ```powershell
-.\scripts\update-youtube-cookies.ps1 -Browser chrome
+.\scripts\update-youtube-cookies.ps1 -Browser firefox
 ```
+
+Firefox is currently the most reliable local browser source on Windows. Chrome may fail with DPAPI/App-Bound cookie decryption errors.
 
 `cookies.txt` is intentionally ignored by Git. Production deploys read the `YOUTUBE_COOKIES_B64` GitHub Actions secret and write `cookies.txt` on the server during deployment.
 
