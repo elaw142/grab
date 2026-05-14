@@ -33,7 +33,7 @@ Any site supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp) — including Y
 ```bash
 git clone https://github.com/elaw142/Grab.git
 cd Grab
-# Add your cookies.txt to the project root
+# Optional local-only file: add cookies.txt to the project root
 # Optional: copy .env.example to .env and set YTDLP_PROXY
 docker compose up -d --build
 ```
@@ -69,6 +69,8 @@ If `yt-dlp` is installed locally, the same script can try to refresh cookies dir
 ```powershell
 .\scripts\update-youtube-cookies.ps1 -Browser chrome
 ```
+
+`cookies.txt` is intentionally ignored by Git. Production deploys read the `YOUTUBE_COOKIES_B64` GitHub Actions secret and write `cookies.txt` on the server during deployment.
 
 To refresh `yt-dlp` inside the Docker image, rebuild without cache:
 
