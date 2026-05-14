@@ -1,6 +1,7 @@
 name: Deploy Grab
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -11,11 +12,19 @@ jobs:
     steps:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
+        env:
+          YOUTUBE_COOKIES_B64: ${{ secrets.YOUTUBE_COOKIES_B64 }}
         with:
           host: ${{ vars.SERVER_HOST }}
           username: opc
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: YOUTUBE_COOKIES_B64
           script: |
             cd ~/grab
             git pull origin main
+            if [ -n "$YOUTUBE_COOKIES_B64" ]; then
+              umask 077
+              printf '%s' "$YOUTUBE_COOKIES_B64" | base64 -d > cookies.txt
+              chmod 600 cookies.txt
+            fi
             docker compose up -d --build

@@ -58,6 +58,18 @@ yt-dlp --cookies cookies.txt --skip-download "https://www.youtube.com/watch?v=dQ
 
 Re-export cookies from your browser and replace `cookies.txt` on the server when they expire.
 
+You can also upload a local cookie export through GitHub Actions without committing it:
+
+```powershell
+.\scripts\update-youtube-cookies.ps1 -CookieFile "$env:USERPROFILE\Downloads\www.youtube.com_cookies (1).txt"
+```
+
+If `yt-dlp` is installed locally, the same script can try to refresh cookies directly from your browser profile before deploying:
+
+```powershell
+.\scripts\update-youtube-cookies.ps1 -Browser chrome
+```
+
 To refresh `yt-dlp` inside the Docker image, rebuild without cache:
 
 ```bash
