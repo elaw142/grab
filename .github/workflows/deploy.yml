@@ -20,9 +20,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: YOUTUBE_COOKIES_B64
           script: |
+            set -eu
             cd ~/grab
-            git pull origin main
-            if [ -n "$YOUTUBE_COOKIES_B64" ]; then
+            git fetch --prune origin main
+            git reset --hard origin/main
+            git clean -fd
+            if [ -n "${YOUTUBE_COOKIES_B64:-}" ]; then
               umask 077
               printf '%s' "$YOUTUBE_COOKIES_B64" | base64 -d > cookies.txt
               chmod 600 cookies.txt
