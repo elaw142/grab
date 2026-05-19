@@ -7,7 +7,7 @@
     <link rel="icon" href="/static/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -22,367 +22,814 @@
       :root {
         --bg: #0c0c0c;
         --surface: #141414;
+        --surface-strong: #101010;
+        --surface-soft: #181818;
         --border: #222;
+        --border-soft: #2b2b2b;
         --text: #e8e8e8;
         --muted: #555;
+        --muted-strong: #9a9a9a;
         --accent: #c8f542;
+        --accent-dim: #7e982e;
+        --signal: #accf39;
         --error: #ff4d4d;
-        --mono: "IBM Plex Mono", monospace;
-        --sans: "IBM Plex Sans", sans-serif;
+        --shadow: rgba(200, 245, 66, 0.16);
+        --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
       }
 
       html,
       body {
-        height: 100%;
+        min-height: 100%;
         background: var(--bg);
         color: var(--text);
-        font-family: var(--sans);
-        font-weight: 300;
+        font-family: var(--mono);
+        font-weight: 400;
       }
 
       body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        padding: 2rem;
+        min-height: 100dvh;
+        padding: clamp(1rem, 4vw, 3rem);
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      .ascii-bg {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.34;
+        mix-blend-mode: screen;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      body::before {
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(232, 232, 232, 0.035) 0 1px,
+          transparent 1px 4px
+        );
+        opacity: 0.42;
+      }
+
+      body::after {
+        border: 1px solid rgba(200, 245, 66, 0.08);
+        box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.86);
       }
 
       .container {
-        width: 100%;
-        max-width: 560px;
+        width: min(100%, 760px);
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
       }
 
       header {
-        margin-bottom: 3rem;
+        padding: clamp(0.5rem, 3vw, 1rem) 0 1.25rem;
       }
 
-      .wordmark {
-        font-family: var(--mono);
-        font-size: 1.1rem;
-        font-weight: 500;
-        letter-spacing: 0.15em;
-        color: var(--accent);
+      .terminal-kicker,
+      .tagline,
+      footer {
+        color: var(--muted);
+        font-size: 0.72rem;
+        letter-spacing: 0;
+      }
+
+      .terminal-kicker {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-bottom: 0.8rem;
+        color: var(--muted-strong);
         text-transform: lowercase;
       }
 
+      .terminal-kicker::before {
+        content: ">";
+        color: var(--accent);
+      }
+
+      .wordmark {
+        color: var(--accent);
+        font-size: clamp(0.5rem, 1.7vw, 0.9rem);
+        line-height: 1.05;
+        text-shadow: 0 0 18px var(--shadow);
+        white-space: pre;
+        overflow: hidden;
+        margin-bottom: 0.75rem;
+      }
+
       .tagline {
-        font-family: var(--mono);
-        font-size: 0.7rem;
-        color: var(--muted);
-        letter-spacing: 0.1em;
-        margin-top: 0.3rem;
+        color: var(--muted-strong);
+      }
+
+      .tagline::after {
+        content: "_";
+        color: var(--accent);
+        animation: caret 1.05s steps(1, end) infinite;
       }
 
       .card {
-        background: var(--surface);
+        background:
+          linear-gradient(180deg, rgba(200, 245, 66, 0.04), transparent 34%),
+          rgba(20, 20, 20, 0.92);
         border: 1px solid var(--border);
-        padding: 2rem;
+        box-shadow: 0 0 0 1px rgba(200, 245, 66, 0.035), 0 24px 80px rgba(0, 0, 0, 0.42);
+        position: relative;
+        backdrop-filter: blur(1px);
+      }
+
+      .card::before,
+      .card::after {
+        color: var(--accent);
+        font-size: 0.8rem;
+        position: absolute;
+        top: -0.7rem;
+      }
+
+      .card::before {
+        content: "+";
+        left: -0.28rem;
+      }
+
+      .card::after {
+        content: "+";
+        right: -0.28rem;
+      }
+
+      .terminal-bar {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-soft);
+        background: var(--surface-strong);
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+
+      .bar-title {
+        color: var(--muted-strong);
+      }
+
+      .bar-state {
+        color: var(--accent);
+      }
+
+      .panel-body {
+        padding: clamp(1rem, 3.5vw, 1.75rem);
+      }
+
+      .readout-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1px;
+        border: 1px solid var(--border-soft);
+        background: var(--border-soft);
+        margin-bottom: 1.4rem;
+      }
+
+      .readout-grid span {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background: rgba(12, 12, 12, 0.68);
+        color: var(--muted);
+        font-size: 0.68rem;
+        white-space: nowrap;
+      }
+
+      .readout-grid b {
+        color: var(--accent);
+        font-weight: 500;
       }
 
       .field {
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.35rem;
       }
 
       label {
-        display: block;
-        font-family: var(--mono);
-        font-size: 0.65rem;
-        letter-spacing: 0.12em;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
         color: var(--muted);
+        font-size: 0.72rem;
+        letter-spacing: 0;
+        margin-bottom: 0.55rem;
         text-transform: uppercase;
-        margin-bottom: 0.5rem;
+      }
+
+      .label-index {
+        color: var(--accent-dim);
+      }
+
+      .command-input {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        min-height: 54px;
+        background: rgba(12, 12, 12, 0.96);
+        border: 1px solid var(--border);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+      }
+
+      .prompt {
+        padding: 0 0.95rem;
+        color: var(--accent);
       }
 
       input[type="text"] {
         width: 100%;
-        background: var(--bg);
-        border: 1px solid var(--border);
+        min-height: 52px;
+        background: transparent;
+        border: 0;
         color: var(--text);
-        font-family: var(--mono);
-        font-size: 0.85rem;
-        padding: 0.75rem 1rem;
+        font: inherit;
+        font-size: 0.88rem;
         outline: none;
-        transition: border-color 0.15s;
+        padding: 0.85rem 1rem 0.85rem 0;
       }
 
-      input[type="text"]:focus {
+      .command-input:focus-within {
         border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(200, 245, 66, 0.22), 0 0 28px rgba(200, 245, 66, 0.07);
       }
 
       input[type="text"]::placeholder {
-        color: var(--muted);
+        color: #555;
       }
 
       .format-grid {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 0.5rem;
-        flex-wrap: wrap;
+      }
+
+      .fmt-btn,
+      .submit-btn,
+      .download-btn {
+        min-height: 44px;
+        font: inherit;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition:
+          background 0.15s ease,
+          border-color 0.15s ease,
+          color 0.15s ease,
+          transform 0.15s ease;
       }
 
       .fmt-btn {
-        background: var(--bg);
-        border: 1px solid var(--border);
+        background: rgba(12, 12, 12, 0.94);
+        border: 1px solid var(--border-soft);
         color: var(--muted);
-        font-family: var(--mono);
-        font-size: 0.75rem;
-        letter-spacing: 0.08em;
-        padding: 0.4rem 0.85rem;
-        cursor: pointer;
-        transition: all 0.1s;
-        text-transform: uppercase;
+        font-size: 0.74rem;
       }
 
-      .fmt-btn:hover {
-        border-color: #444;
+      .fmt-btn:hover,
+      .fmt-btn:focus-visible {
+        border-color: var(--accent);
         color: var(--text);
+        outline: none;
       }
 
       .fmt-btn.active {
-        background: var(--accent);
+        background: rgba(200, 245, 66, 0.1);
         border-color: var(--accent);
-        color: #0c0c0c;
+        color: var(--accent);
+        box-shadow: inset 0 -2px 0 var(--accent);
+      }
+
+      .divider {
+        border: 0;
+        border-top: 1px dashed var(--border);
+        margin: 1.5rem 0;
+      }
+
+      .submit-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.9rem;
       }
 
       .submit-btn {
         width: 100%;
+        min-height: 52px;
         background: var(--accent);
-        border: none;
+        border: 1px solid var(--accent);
         color: #0c0c0c;
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        font-weight: 500;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        padding: 0.9rem;
-        cursor: pointer;
-        transition: opacity 0.15s;
-        margin-top: 0.5rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0;
       }
 
-      .submit-btn:hover {
-        opacity: 0.85;
+      .submit-btn:hover,
+      .submit-btn:focus-visible {
+        background: #d9ff62;
+        transform: translateY(-1px);
+        outline: none;
       }
+
       .submit-btn:disabled {
-        opacity: 0.35;
+        opacity: 0.42;
         cursor: not-allowed;
+        transform: none;
+      }
+
+      .packet-mark {
+        color: var(--muted);
+        font-size: 0.7rem;
+        white-space: nowrap;
       }
 
       .status-area {
-        margin-top: 1.5rem;
-        min-height: 2rem;
+        min-height: 4rem;
+        margin-top: 1.25rem;
+        padding: 0.85rem 1rem;
+        background: rgba(12, 12, 12, 0.86);
+        border: 1px solid var(--border-soft);
       }
 
       .status-line {
-        font-family: var(--mono);
-        font-size: 0.75rem;
-        color: var(--muted);
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 0.75rem;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
       }
 
       .status-line.error {
         color: var(--error);
       }
+
       .status-line.done {
         color: var(--accent);
       }
 
-      .spinner {
-        width: 12px;
-        height: 12px;
-        border: 1.5px solid var(--border);
-        border-top-color: var(--accent);
-        border-radius: 50%;
-        animation: spin 0.7s linear infinite;
-        flex-shrink: 0;
+      .status-prefix {
+        color: var(--signal);
+        flex: 0 0 auto;
       }
 
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+      .error .status-prefix {
+        color: var(--error);
+      }
+
+      .done .status-prefix {
+        color: var(--accent);
+      }
+
+      .spinner {
+        width: 0.75rem;
+        height: 1rem;
+        margin-top: 0.12rem;
+        background: var(--accent);
+        box-shadow: 0 0 14px var(--shadow);
+        animation: pulse 0.8s steps(1, end) infinite;
+        flex: 0 0 auto;
       }
 
       .download-btn {
-        display: inline-block;
-        margin-top: 1rem;
-        background: transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 0.9rem;
+        min-height: 44px;
         border: 1px solid var(--accent);
         color: var(--accent);
-        font-family: var(--mono);
-        font-size: 0.75rem;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        padding: 0.6rem 1.2rem;
-        cursor: pointer;
+        background: transparent;
+        font-size: 0.74rem;
+        padding: 0.65rem 1rem;
         text-decoration: none;
-        transition: all 0.15s;
-        animation: fadeIn 0.3s ease;
       }
 
-      .download-btn:hover {
-        background: var(--accent);
-        color: #0c0c0c;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(4px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .divider {
-        border: none;
-        border-top: 1px solid var(--border);
-        margin: 1.5rem 0;
+      .download-btn:hover,
+      .download-btn:focus-visible {
+        background: rgba(200, 245, 66, 0.12);
+        outline: none;
       }
 
       footer {
-        margin-top: 2rem;
-        font-family: var(--mono);
-        font-size: 0.65rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 1rem;
         color: var(--muted);
-        letter-spacing: 0.08em;
+      }
+
+      .site-mark {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .site-mark:hover,
+      .site-mark:focus-visible {
+        color: var(--text);
+        outline: none;
+        text-decoration: underline;
+        text-underline-offset: 0.22rem;
+      }
+
+      @keyframes caret {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes pulse {
+        50% {
+          opacity: 0.25;
+        }
+      }
+
+      @media (max-width: 660px) {
+        body {
+          padding: 1rem;
+        }
+
+        .wordmark {
+          font-size: clamp(0.43rem, 2.3vw, 0.62rem);
+        }
+
+        .terminal-bar,
+        footer {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.35rem;
+        }
+
+        .readout-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .format-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .submit-row {
+          grid-template-columns: 1fr;
+        }
+
+        .packet-mark {
+          order: -1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container">
+    <canvas class="ascii-bg" id="ascii-bg" aria-hidden="true"></canvas>
+    <main class="container">
       <header>
-        <div class="wordmark">grab</div>
-        <div class="tagline">// video → audio</div>
+        <div class="terminal-kicker">grab://audio-extract</div>
+        <pre class="wordmark" aria-label="grab">
+  ____ ____      _    ____
+ / ___|  _ \    / \  | __ )
+| |  _| |_) |  / _ \ |  _ \
+| |_| |  _ <  / ___ \| |_) |
+ \____|_| \_\/_/   \_\____/
+        </pre>
+        <div class="tagline">[ video::audio ] / stream capture ready </div>
       </header>
 
-      <div class="card">
-        <div class="field">
-          <label>URL</label>
-          <input
-            type="text"
-            id="url-input"
-            placeholder="https://youtube.com/watch?v=..."
-          />
+      <section class="card" aria-label="grab console">
+        <div class="terminal-bar">
+          <span class="bar-title">elaw142@grab:~$ ./grab</span>
+          <span class="bar-state">SESSION=READY</span>
         </div>
 
-        <div class="field">
-          <label>Format</label>
-          <div class="format-grid" id="format-grid">
-            {% for fmt in formats %}
-            <button
-              class="fmt-btn {% if fmt == 'mp3' %}active{% endif %}"
-              data-fmt="{{ fmt }}"
-            >
-              {{ fmt }}
-            </button>
-            {% endfor %}
+        <div class="panel-body">
+          <div class="readout-grid" aria-hidden="true">
+            <span>MODE=<b>AUDIO</b></span>
+            <span>TTL=<b>300S</b></span>
+            <span>QUEUE=<b>LOCAL</b></span>
+          </div>
+
+          <form id="grab-form" autocomplete="off">
+            <div class="field">
+              <label for="url-input"><span class="label-index">01</span> source_url</label>
+              <div class="command-input">
+                <span class="prompt" aria-hidden="true">$</span>
+                <input
+                  type="text"
+                  id="url-input"
+                  name="url"
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+            </div>
+
+            <div class="field">
+              <label><span class="label-index">02</span> encode_format</label>
+              <div class="format-grid" id="format-grid" role="group" aria-label="Audio format">
+                {% for fmt in formats %}
+                <button
+                  type="button"
+                  class="fmt-btn {% if fmt == 'mp3' %}active{% endif %}"
+                  data-fmt="{{ fmt }}"
+                  aria-pressed="{% if fmt == 'mp3' %}true{% else %}false{% endif %}"
+                >
+                  [{{ fmt }}]
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+
+            <hr class="divider" />
+
+            <div class="submit-row">
+              <button type="submit" class="submit-btn" id="grab-btn">[ init_grab ]</button>
+              <span class="packet-mark" aria-hidden="true">PKT:0000:ARMED</span>
+            </div>
+          </form>
+
+          <div class="status-area" id="status-area" aria-live="polite">
+            <div class="status-line">
+              <span class="status-prefix">[idle]</span>
+              <span>awaiting source</span>
+            </div>
           </div>
         </div>
+      </section>
 
-        <hr class="divider" />
-
-        <button class="submit-btn" id="grab-btn">grab</button>
-
-        <div class="status-area" id="status-area"></div>
-      </div>
-
-      <footer>files auto-delete after 5 minutes</footer>
-    </div>
+      <footer>
+        <a class="site-mark" href="https://github.com/elaw142" target="_blank" rel="noreferrer">[site] elaw142 // github</a>
+        <span>[ttl] files auto-delete after 5 minutes</span>
+        <span>[formats] mp3 wav flac m4a ogg</span>
+      </footer>
+    </main>
 
     <script>
       let selectedFormat = "mp3";
       let pollInterval = null;
 
+      const grabButton = document.getElementById("grab-btn");
+      const grabForm = document.getElementById("grab-form");
+      const statusArea = document.getElementById("status-area");
+
       document.querySelectorAll(".fmt-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-          document
-            .querySelectorAll(".fmt-btn")
-            .forEach((b) => b.classList.remove("active"));
+          document.querySelectorAll(".fmt-btn").forEach((button) => {
+            button.classList.remove("active");
+            button.setAttribute("aria-pressed", "false");
+          });
           btn.classList.add("active");
+          btn.setAttribute("aria-pressed", "true");
           selectedFormat = btn.dataset.fmt;
+          setStatus("[fmt]", `selected ${selectedFormat}`);
         });
       });
 
-      document
-        .getElementById("grab-btn")
-        .addEventListener("click", startDownload);
-      document.getElementById("url-input").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") startDownload();
+      grabForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        startDownload();
       });
 
-      function setStatus(html, cls = "") {
-        const area = document.getElementById("status-area");
-        area.innerHTML = `<div class="status-line ${cls}">${html}</div>`;
+      function setStatus(prefix, message, cls = "") {
+        statusArea.innerHTML = `
+          <div class="status-line ${cls}">
+            <span class="status-prefix">${prefix}</span>
+            <span>${message}</span>
+          </div>
+        `;
+      }
+
+      function setBusy(isBusy) {
+        grabButton.disabled = isBusy;
+        grabButton.textContent = isBusy ? "[ working ]" : "[ init_grab ]";
       }
 
       function startDownload() {
         const url = document.getElementById("url-input").value.trim();
-        if (!url) return;
+        if (!url) {
+          setStatus("[warn]", "source_url required", "error");
+          return;
+        }
 
         if (pollInterval) clearInterval(pollInterval);
 
-        const btn = document.getElementById("grab-btn");
-        btn.disabled = true;
-        setStatus('<div class="spinner"></div> fetching...');
+        setBusy(true);
+        statusArea.innerHTML = `
+          <div class="status-line">
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="status-prefix">[fetch]</span>
+            <span>resolving source...</span>
+          </div>
+        `;
 
         fetch("/api/download", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url, format: selectedFormat }),
         })
-          .then((r) => r.json())
+          .then((response) => response.json())
           .then((data) => {
             if (data.error) {
-              setStatus(data.error, "error");
-              btn.disabled = false;
+              setStatus("[err]", escHtml(data.error), "error");
+              setBusy(false);
               return;
             }
             pollStatus(data.job_id);
           })
           .catch(() => {
-            setStatus("request failed", "error");
-            btn.disabled = false;
+            setStatus("[err]", "request failed", "error");
+            setBusy(false);
           });
       }
 
       function pollStatus(jobId) {
         pollInterval = setInterval(() => {
           fetch(`/api/status/${jobId}`)
-            .then((r) => r.json())
+            .then((response) => response.json())
             .then((data) => {
               if (data.status === "processing") {
-                setStatus('<div class="spinner"></div> processing...');
+                statusArea.innerHTML = `
+                  <div class="status-line">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span class="status-prefix">[proc]</span>
+                    <span>encoding ${selectedFormat}...</span>
+                  </div>
+                `;
               } else if (data.status === "done") {
                 clearInterval(pollInterval);
                 const title = data.title || "audio";
-                const area = document.getElementById("status-area");
-                area.innerHTML = `
-                <div class="status-line done">✓ ${escHtml(title)}</div>
-                <a class="download-btn" href="/api/file/${jobId}" download>↓ download ${data.format}</a>
-              `;
-                document.getElementById("grab-btn").disabled = false;
+                statusArea.innerHTML = `
+                  <div class="status-line done">
+                    <span class="status-prefix">[ok]</span>
+                    <span>${escHtml(title)}</span>
+                  </div>
+                  <a class="download-btn" href="/api/file/${jobId}" download>[ download_${escHtml(data.format)} ]</a>
+                `;
+                setBusy(false);
               } else if (data.status === "error") {
                 clearInterval(pollInterval);
-                setStatus(data.error || "something went wrong", "error");
-                document.getElementById("grab-btn").disabled = false;
+                setStatus("[err]", escHtml(data.error || "something went wrong"), "error");
+                setBusy(false);
               }
+            })
+            .catch(() => {
+              clearInterval(pollInterval);
+              setStatus("[err]", "status request failed", "error");
+              setBusy(false);
             });
         }, 1500);
       }
 
       function escHtml(str) {
-        return str
+        return String(str)
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;");
       }
+
+      function initAsciiBackground() {
+        const canvas = document.getElementById("ascii-bg");
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d", { alpha: true });
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const glyphs = [" ", ".", ":", "-", "=", "+", "*"];
+        let width = 0;
+        let height = 0;
+        let dpr = 1;
+        let lastFrame = 0;
+        let frameId = null;
+
+        function hexToRgb(hex) {
+          const clean = hex.trim().replace("#", "");
+          const value = parseInt(clean.length === 3
+            ? clean.split("").map((char) => char + char).join("")
+            : clean, 16);
+          return {
+            r: (value >> 16) & 255,
+            g: (value >> 8) & 255,
+            b: value & 255,
+          };
+        }
+
+        function readTheme() {
+          const styles = getComputedStyle(document.documentElement);
+          return {
+            accent: hexToRgb(styles.getPropertyValue("--accent")),
+            dim: hexToRgb(styles.getPropertyValue("--accent-dim")),
+            bg: hexToRgb(styles.getPropertyValue("--bg")),
+          };
+        }
+
+        function mixColor(a, b, amount) {
+          const blend = Math.max(0, Math.min(1, amount));
+          return {
+            r: Math.round(a.r + (b.r - a.r) * blend),
+            g: Math.round(a.g + (b.g - a.g) * blend),
+            b: Math.round(a.b + (b.b - a.b) * blend),
+          };
+        }
+
+        function resize() {
+          dpr = Math.min(window.devicePixelRatio || 1, 2);
+          width = window.innerWidth;
+          height = window.innerHeight;
+          canvas.width = Math.ceil(width * dpr);
+          canvas.height = Math.ceil(height * dpr);
+          canvas.style.width = `${width}px`;
+          canvas.style.height = `${height}px`;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function wave(x, y, time) {
+          const slowX = Math.sin(x * 0.021 + time * 0.52);
+          const slowY = Math.cos(y * 0.027 - time * 0.38);
+          const diagonal = Math.sin((x + y) * 0.014 + time * 0.3);
+          const sweep = Math.cos((x - y) * 0.018 - time * 0.44);
+          return (slowX + slowY + diagonal + sweep + 4) / 8;
+        }
+
+        function draw(timestamp = 0) {
+          if (timestamp - lastFrame < 33 && !reducedMotion.matches) {
+            frameId = requestAnimationFrame(draw);
+            return;
+          }
+          lastFrame = timestamp;
+
+          const theme = readTheme();
+          const time = reducedMotion.matches ? 8 : timestamp * 0.001;
+          const cellX = width < 640 ? 16 : 18;
+          const cellY = width < 640 ? 18 : 20;
+          const cols = Math.ceil(width / cellX) + 1;
+          const rows = Math.ceil(height / cellY) + 1;
+
+          ctx.clearRect(0, 0, width, height);
+          ctx.font = `${Math.max(10, cellX * 0.82)}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          for (let row = 0; row < rows; row += 1) {
+            for (let col = 0; col < cols; col += 1) {
+              const x = col * cellX;
+              const y = row * cellY;
+              const value = wave(x, y, time);
+              const vignetteX = Math.abs(x / width - 0.5) * 1.9;
+              const vignetteY = Math.abs(y / height - 0.5) * 1.3;
+              const edgeLift = Math.min(1, vignetteX + vignetteY);
+              const level = Math.max(0, Math.min(1, value * 0.78 + edgeLift * 0.2));
+              const glyphIndex = Math.min(glyphs.length - 1, Math.floor(level * glyphs.length));
+              const glyph = glyphs[glyphIndex];
+
+              if (glyph === " " || level < 0.24) continue;
+
+              const color = mixColor(theme.dim, theme.accent, level);
+              const alpha = 0.05 + level * 0.18;
+              ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+              ctx.fillText(glyph, x + cellX * 0.5, y + cellY * 0.5);
+            }
+          }
+
+          if (!reducedMotion.matches) {
+            frameId = requestAnimationFrame(draw);
+          }
+        }
+
+        function restart() {
+          if (frameId) cancelAnimationFrame(frameId);
+          resize();
+          draw();
+          if (!reducedMotion.matches) frameId = requestAnimationFrame(draw);
+        }
+
+        window.addEventListener("resize", restart);
+        reducedMotion.addEventListener("change", restart);
+        restart();
+      }
+
+      initAsciiBackground();
     </script>
   </body>
 </html>
