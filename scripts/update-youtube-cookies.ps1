@@ -147,17 +147,22 @@ function Assert-YoutubeAcceptsCookies {
         Copy-Item -LiteralPath $Path -Destination $validationCookieFile -Force
         $result = Invoke-YtDlpCapture -Arguments @(
             "--cookies", $validationCookieFile,
+            "--ignore-no-formats-error",
             "--skip-download",
             "--no-playlist",
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         )
 
         $output = $result.Output -join "`n"
-        if ($result.ExitCode -ne 0 -or
-            $output -match "provided YouTube account cookies are no longer valid" -or
+        if ($output -match "provided YouTube account cookies are no longer valid" -or
             $output -match "Sign in to confirm") {
             $result.Output | ForEach-Object { Write-Output $_ }
             throw "YouTube rejected these cookies. Re-export from a browser profile that is freshly signed into YouTube, then try again."
+        }
+
+        if ($result.ExitCode -ne 0) {
+            $result.Output | ForEach-Object { Write-Output $_ }
+            throw "yt-dlp could not validate these cookies. Check the output above, then try again."
         }
     }
     finally {
