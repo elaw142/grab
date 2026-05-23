@@ -184,6 +184,7 @@ if ($useBrowserExport) {
     Invoke-YtDlp @(
         "--cookies-from-browser", $Browser,
         "--cookies", $CookieFile,
+        "--ignore-no-formats-error",
         "--skip-download",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     )
