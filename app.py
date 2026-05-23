@@ -5,6 +5,7 @@ import threading
 import time
 import subprocess
 import glob
+import shutil
 
 app = Flask(__name__)
 
@@ -22,11 +23,22 @@ jobs = {}
 FORMATS = ["mp3", "wav", "flac", "m4a", "ogg"]
 
 
-def build_ytdlp_cmd(*args):
+def make_cookies_copy():
+    if not COOKIES_FILE or not os.path.exists(COOKIES_FILE):
+        return COOKIES_FILE
+
+    cookies_copy = os.path.join(DOWNLOAD_DIR, f"cookies-{uuid.uuid4()}.txt")
+    shutil.copyfile(COOKIES_FILE, cookies_copy)
+    os.chmod(cookies_copy, 0o600)
+    return cookies_copy
+
+
+def build_ytdlp_cmd(*args, cookies_file=None):
     cmd = [YTDLP_BIN]
 
-    if COOKIES_FILE:
-        cmd.extend(["--cookies", COOKIES_FILE])
+    active_cookies_file = COOKIES_FILE if cookies_file is None else cookies_file
+    if active_cookies_file:
+        cmd.extend(["--cookies", active_cookies_file])
     if JS_RUNTIME:
         cmd.extend(["--js-runtimes", JS_RUNTIME])
     if YTDLP_PROXY is not None:
@@ -53,13 +65,17 @@ def cleanup_file(path, delay=300):
 def do_download(job_id, url, fmt):
     job = jobs[job_id]
     output_path = os.path.join(DOWNLOAD_DIR, job_id)
+    cookies_copy = None
 
     try:
+        cookies_copy = make_cookies_copy()
+
         # Get title first
         title_result = subprocess.run(build_ytdlp_cmd(
             "--get-title",
             "--no-playlist",
-            url
+            url,
+            cookies_file=cookies_copy
         ), capture_output=True, text=True)
 
         title = title_result.stdout.strip() or "audio"
@@ -69,7 +85,8 @@ def do_download(job_id, url, fmt):
             "-x", "--audio-format", fmt,
             "-o", output_path + ".%(ext)s",
             "--no-playlist",
-            url
+            url,
+            cookies_file=cookies_copy
         ), capture_output=True, text=True)
 
         if result.returncode != 0:
@@ -97,6 +114,9 @@ def do_download(job_id, url, fmt):
     except Exception as e:
         job["status"] = "error"
         job["error"] = str(e)
+    finally:
+        if cookies_copy and cookies_copy != COOKIES_FILE and os.path.exists(cookies_copy):
+            os.remove(cookies_copy)
 
 
 @app.route("/")

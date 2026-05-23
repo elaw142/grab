@@ -53,24 +53,32 @@ grab.yourdomain.com {
 YouTube cookies expire periodically. To check if your cookies are still valid:
 
 ```bash
-yt-dlp --cookies cookies.txt --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+cp cookies.txt /tmp/grab-cookies-test.txt
+yt-dlp --cookies /tmp/grab-cookies-test.txt --js-runtimes node --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 Re-export cookies from your browser and replace `cookies.txt` on the server when they expire.
 
-You can also upload a local cookie export through GitHub Actions without committing it:
+You can also refresh cookies directly from your local browser profile and upload them through GitHub Actions without committing them:
 
 ```powershell
-.\scripts\update-youtube-cookies.ps1 -CookieFile "$env:USERPROFILE\Downloads\www.youtube.com_cookies (1).txt"
+.\scripts\update-youtube-cookies.ps1
 ```
 
-If `yt-dlp` is installed locally, the same script can try to refresh cookies directly from your browser profile before deploying:
+Firefox is currently the default and most reliable local browser source on Windows. To choose a browser explicitly:
 
 ```powershell
 .\scripts\update-youtube-cookies.ps1 -Browser firefox
 ```
 
-Firefox is currently the most reliable local browser source on Windows. Chrome may fail with DPAPI/App-Bound cookie decryption errors.
+Chrome may fail with DPAPI/App-Bound cookie decryption errors. If you use a cookie export extension instead, export cookies while you are on `youtube.com`, not `grab.emlw.dev`, then pass the file:
+
+```powershell
+.\scripts\update-youtube-cookies.ps1 -CookieFile "$env:USERPROFILE\Downloads\www.youtube.com_cookies.txt"
+```
+
+The script rejects empty, wrong-domain, anonymous, or signed-out YouTube cookie exports that only contain visitor cookies such as `PREF`, `SOCS`, `YSC`, or `VISITOR_INFO1_LIVE`; use a browser profile that is signed into YouTube.
+It also runs a local `yt-dlp` check and rejects exports that YouTube reports as rotated or invalid. Full-browser exports are filtered down to YouTube cookies before upload.
 
 `cookies.txt` is intentionally ignored by Git. Production deploys read the `YOUTUBE_COOKIES_B64` GitHub Actions secret and write `cookies.txt` on the server during deployment.
 

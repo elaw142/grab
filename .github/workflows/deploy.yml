@@ -27,7 +27,23 @@ jobs:
             git clean -fd
             if [ -n "${YOUTUBE_COOKIES_B64:-}" ]; then
               umask 077
-              printf '%s' "$YOUTUBE_COOKIES_B64" | base64 -d > cookies.txt
+              cookie_tmp="$(mktemp)"
+              trap 'rm -f "$cookie_tmp"' EXIT
+              printf '%s' "$YOUTUBE_COOKIES_B64" | base64 -d > "$cookie_tmp"
+              cookie_names="$(awk 'NF >= 7 && ($1 !~ /^#/ || $1 ~ /^#HttpOnly_/) { print $6 }' "$cookie_tmp" | sort -u | tr '\n' ' ')"
+              case " $cookie_names " in
+                *" LOGIN_INFO "*) ;;
+                *) echo "::error::YOUTUBE_COOKIES_B64 is missing signed-in YouTube cookies. Present cookie names: $cookie_names"; exit 1 ;;
+              esac
+              case " $cookie_names " in
+                *" SID "*|*" __Secure-1PSID "*|*" __Secure-3PSID "*) ;;
+                *) echo "::error::YOUTUBE_COOKIES_B64 is missing YouTube session cookies. Present cookie names: $cookie_names"; exit 1 ;;
+              esac
+              case " $cookie_names " in
+                *" SAPISID "*|*" APISID "*|*" __Secure-1PAPISID "*|*" __Secure-3PAPISID "*) ;;
+                *) echo "::error::YOUTUBE_COOKIES_B64 is missing YouTube API cookies. Present cookie names: $cookie_names"; exit 1 ;;
+              esac
+              mv "$cookie_tmp" cookies.txt
               chmod 600 cookies.txt
             fi
             docker compose up -d --build
