@@ -79,6 +79,7 @@ Chrome may fail with DPAPI/App-Bound cookie decryption errors. If you use a cook
 
 The script rejects empty, wrong-domain, anonymous, or signed-out YouTube cookie exports that only contain visitor cookies such as `PREF`, `SOCS`, `YSC`, or `VISITOR_INFO1_LIVE`; use a browser profile that is signed into YouTube.
 It also runs a local `yt-dlp` check and rejects exports that YouTube reports as rotated or invalid. Full-browser exports are filtered down to YouTube cookies before upload.
+To test an export or browser profile without uploading anything, add `-ValidateOnly`.
 
 `cookies.txt` is intentionally ignored by Git. Production deploys read the `YOUTUBE_COOKIES_B64` GitHub Actions secret and write `cookies.txt` on the server during deployment.
 

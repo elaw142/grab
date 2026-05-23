@@ -2,7 +2,8 @@ param(
     [string]$CookieFile = "",
     [string]$Repo = "elaw142/grab",
     [string]$Workflow = "deploy.yml",
-    [string]$Browser = "firefox"
+    [string]$Browser = "firefox",
+    [switch]$ValidateOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -197,6 +198,15 @@ $uploadCookieFile = New-TemporaryFile
 Copy-YoutubeCookies -Source $CookieFile -Destination $uploadCookieFile
 Assert-YoutubeAuthCookies -Path $uploadCookieFile
 Assert-YoutubeAcceptsCookies -Path $uploadCookieFile
+
+if ($ValidateOnly) {
+    Write-Host "Cookie validation passed. Nothing uploaded because -ValidateOnly was set."
+    Remove-Item -LiteralPath $uploadCookieFile -Force -ErrorAction SilentlyContinue
+    if ($deleteCookieFile) {
+        Remove-Item -LiteralPath $CookieFile -Force -ErrorAction SilentlyContinue
+    }
+    return
+}
 
 $tempFile = New-TemporaryFile
 
