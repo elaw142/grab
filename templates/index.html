@@ -47,6 +47,12 @@
         font-weight: 400;
       }
 
+      /* always reserve the scrollbar gutter so a scrollbar appearing on one
+         page never shifts the centered layout relative to the others */
+      html {
+        scrollbar-gutter: stable;
+      }
+
       body {
         min-height: 100dvh;
         padding: clamp(1rem, 4vw, 3rem);
