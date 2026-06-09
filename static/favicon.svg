@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#0c0c0c"/>
+  <rect x="1" y="1" width="30" height="30" rx="5" fill="none" stroke="#c8f542" stroke-opacity="0.35"/>
+  <!-- downward grab/pull arrow -->
+  <path d="M16 26 L8 16 H12.5 V8 H19.5 V16 H24 Z" fill="#c8f542"/>
+</svg>

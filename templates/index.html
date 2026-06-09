@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>grab</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <link rel="icon" href="/static/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
@@ -716,7 +717,8 @@
 
         const ctx = canvas.getContext("2d", { alpha: true });
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-        const glyphs = [" ", ".", ":", "-", "=", "+", "*"];
+        // equalizer bars rising and falling: an audio level field
+        const glyphs = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
         let width = 0;
         let height = 0;
         let dpr = 1;
