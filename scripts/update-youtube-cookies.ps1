@@ -214,20 +214,14 @@ if ($ValidateOnly) {
     return
 }
 
-$tempFile = New-TemporaryFile
-
 try {
-    [Convert]::ToBase64String([IO.File]::ReadAllBytes($uploadCookieFile)) |
-        Set-Content -LiteralPath $tempFile -NoNewline -Encoding ascii
-
-    Get-Content -Raw -LiteralPath $tempFile |
-        gh secret set YOUTUBE_COOKIES_B64 --repo $Repo
+    $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($uploadCookieFile))
+    gh secret set YOUTUBE_COOKIES_B64 --repo $Repo --body $b64
     gh workflow run $Workflow --repo $Repo
 
     Write-Host "Updated YOUTUBE_COOKIES_B64 and triggered $Workflow for $Repo."
 }
 finally {
-    Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $uploadCookieFile -Force -ErrorAction SilentlyContinue
     if ($deleteCookieFile) {
         Remove-Item -LiteralPath $CookieFile -Force -ErrorAction SilentlyContinue
