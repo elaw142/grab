@@ -14,21 +14,30 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 YTDLP_BIN = os.environ.get("YTDLP_BIN", "/usr/local/bin/yt-dlp")
 COOKIES_FILE = os.environ.get("COOKIES_FILE", "/app/cookies.txt")
+INSTAGRAM_COOKIES_FILE = os.environ.get("INSTAGRAM_COOKIES_FILE", "/app/instagram-cookies.txt")
 JS_RUNTIME = os.environ.get("YTDLP_JS_RUNTIME", "node:/usr/bin/node")
 YTDLP_PROXY = os.environ.get("YTDLP_PROXY")
 DIRECT_PROXY_VALUES = {"", "none", "direct", "off", "false", "0"}
+
+
+def get_cookies_file(url):
+    if INSTAGRAM_COOKIES_FILE and "instagram.com" in url and os.path.exists(INSTAGRAM_COOKIES_FILE):
+        return INSTAGRAM_COOKIES_FILE
+    return COOKIES_FILE
 
 jobs = {}
 
 FORMATS = ["mp3", "wav", "flac", "m4a", "ogg"]
 
 
-def make_cookies_copy():
-    if not COOKIES_FILE or not os.path.exists(COOKIES_FILE):
-        return COOKIES_FILE
+def make_cookies_copy(cookies_file=None):
+    if cookies_file is None:
+        cookies_file = COOKIES_FILE
+    if not cookies_file or not os.path.exists(cookies_file):
+        return cookies_file
 
     cookies_copy = os.path.join(DOWNLOAD_DIR, f"cookies-{uuid.uuid4()}.txt")
-    shutil.copyfile(COOKIES_FILE, cookies_copy)
+    shutil.copyfile(cookies_file, cookies_copy)
     os.chmod(cookies_copy, 0o600)
     return cookies_copy
 
@@ -68,7 +77,7 @@ def do_download(job_id, url, fmt):
     cookies_copy = None
 
     try:
-        cookies_copy = make_cookies_copy()
+        cookies_copy = make_cookies_copy(get_cookies_file(url))
 
         # Get title first
         title_result = subprocess.run(build_ytdlp_cmd(

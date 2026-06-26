@@ -14,11 +14,12 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           YOUTUBE_COOKIES_B64: ${{ secrets.YOUTUBE_COOKIES_B64 }}
+          INSTAGRAM_COOKIES_B64: ${{ secrets.INSTAGRAM_COOKIES_B64 }}
         with:
           host: ${{ vars.SERVER_HOST }}
           username: opc
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: YOUTUBE_COOKIES_B64
+          envs: YOUTUBE_COOKIES_B64,INSTAGRAM_COOKIES_B64
           script: |
             set -eu
             cd ~/grab
@@ -45,5 +46,17 @@ jobs:
               esac
               mv "$cookie_tmp" cookies.txt
               chmod 600 cookies.txt
+            fi
+            if [ -n "${INSTAGRAM_COOKIES_B64:-}" ]; then
+              umask 077
+              ig_tmp="$(mktemp)"
+              printf '%s' "$INSTAGRAM_COOKIES_B64" | base64 -d > "$ig_tmp"
+              cookie_names="$(awk 'NF >= 7 && ($1 !~ /^#/ || $1 ~ /^#HttpOnly_/) { print $6 }' "$ig_tmp" | sort -u | tr '\n' ' ')"
+              case " $cookie_names " in
+                *" sessionid "*) ;;
+                *) echo "::error::INSTAGRAM_COOKIES_B64 is missing Instagram session cookies. Present cookie names: $cookie_names"; exit 1 ;;
+              esac
+              mv "$ig_tmp" instagram-cookies.txt
+              chmod 600 instagram-cookies.txt
             fi
             docker compose up -d --build
