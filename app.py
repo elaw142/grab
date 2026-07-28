@@ -6,6 +6,7 @@ import time
 import subprocess
 import glob
 import shutil
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 
@@ -15,15 +16,26 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 YTDLP_BIN = os.environ.get("YTDLP_BIN", "/usr/local/bin/yt-dlp")
 COOKIES_FILE = os.environ.get("COOKIES_FILE", "/app/cookies.txt")
 INSTAGRAM_COOKIES_FILE = os.environ.get("INSTAGRAM_COOKIES_FILE", "/app/instagram-cookies.txt")
-JS_RUNTIME = os.environ.get("YTDLP_JS_RUNTIME", "node:/usr/bin/node")
+JS_RUNTIME = os.environ.get("YTDLP_JS_RUNTIME", "deno:/usr/local/bin/deno")
 YTDLP_PROXY = os.environ.get("YTDLP_PROXY")
 DIRECT_PROXY_VALUES = {"", "none", "direct", "off", "false", "0"}
 
 
+def hostname_matches(url, domain):
+    hostname = (urlparse(url).hostname or "").lower().rstrip(".")
+    return hostname == domain or hostname.endswith(f".{domain}")
+
+
+def is_youtube_url(url):
+    return hostname_matches(url, "youtube.com") or hostname_matches(url, "youtu.be")
+
+
 def get_cookies_file(url):
-    if INSTAGRAM_COOKIES_FILE and "instagram.com" in url and os.path.exists(INSTAGRAM_COOKIES_FILE):
+    if hostname_matches(url, "instagram.com") and os.path.exists(INSTAGRAM_COOKIES_FILE):
         return INSTAGRAM_COOKIES_FILE
-    return COOKIES_FILE
+    if is_youtube_url(url) and os.path.exists(COOKIES_FILE):
+        return COOKIES_FILE
+    return None
 
 jobs = {}
 
@@ -31,10 +43,8 @@ FORMATS = ["mp3", "wav", "flac", "m4a", "ogg"]
 
 
 def make_cookies_copy(cookies_file=None):
-    if cookies_file is None:
-        cookies_file = COOKIES_FILE
     if not cookies_file or not os.path.exists(cookies_file):
-        return cookies_file
+        return None
 
     cookies_copy = os.path.join(DOWNLOAD_DIR, f"cookies-{uuid.uuid4()}.txt")
     shutil.copyfile(cookies_file, cookies_copy)
@@ -45,9 +55,8 @@ def make_cookies_copy(cookies_file=None):
 def build_ytdlp_cmd(*args, cookies_file=None):
     cmd = [YTDLP_BIN]
 
-    active_cookies_file = COOKIES_FILE if cookies_file is None else cookies_file
-    if active_cookies_file:
-        cmd.extend(["--cookies", active_cookies_file])
+    if cookies_file:
+        cmd.extend(["--cookies", cookies_file])
     if JS_RUNTIME:
         cmd.extend(["--js-runtimes", JS_RUNTIME])
     if YTDLP_PROXY is not None:
@@ -79,31 +88,48 @@ def do_download(job_id, url, fmt):
     try:
         cookies_copy = make_cookies_copy(get_cookies_file(url))
 
-        # Get title first
-        title_result = subprocess.run(build_ytdlp_cmd(
-            "--get-title",
-            "--no-playlist",
-            url,
-            cookies_file=cookies_copy
-        ), capture_output=True, text=True)
+        # Public YouTube videos are more reliable without account cookies, and
+        # yt-dlp recommends only using account cookies for restricted content.
+        # Other authenticated sites try their site-specific cookies first.
+        cookie_attempts = [None]
+        if cookies_copy:
+            cookie_attempts = ([None, cookies_copy]
+                               if is_youtube_url(url)
+                               else [cookies_copy, None])
 
-        title = title_result.stdout.strip() or "audio"
+        result = None
+        successful_cookies = None
+        for attempt_cookies in cookie_attempts:
+            result = subprocess.run(build_ytdlp_cmd(
+                "-f", "bestaudio/best",
+                "-x", "--audio-format", fmt,
+                "-o", output_path + ".%(ext)s",
+                "--no-playlist",
+                url,
+                cookies_file=attempt_cookies
+            ), capture_output=True, text=True)
 
-        result = subprocess.run(build_ytdlp_cmd(
-            "-f", "bestaudio",
-            "-x", "--audio-format", fmt,
-            "-o", output_path + ".%(ext)s",
-            "--no-playlist",
-            url,
-            cookies_file=cookies_copy
-        ), capture_output=True, text=True)
+            if result.returncode == 0:
+                successful_cookies = attempt_cookies
+                break
 
-        if result.returncode != 0:
+            for partial_path in glob.glob(output_path + ".*"):
+                if os.path.isfile(partial_path):
+                    os.remove(partial_path)
+
+        if result is None or result.returncode != 0:
             job["status"] = "error"
             job["error"] = last_stderr_line(result)
             return
 
-        import glob
+        title_result = subprocess.run(build_ytdlp_cmd(
+            "--get-title",
+            "--no-playlist",
+            url,
+            cookies_file=successful_cookies
+        ), capture_output=True, text=True)
+        title = title_result.stdout.strip() or "audio"
+
         files = glob.glob(output_path + f".{fmt}")
         if not files:
             files = glob.glob(output_path + ".*")

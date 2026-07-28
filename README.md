@@ -25,8 +25,9 @@ Any site supported by [yt-dlp](https://github.com/yt-dlp/yt-dlp) — including Y
 ### Prerequisites
 
 - Docker
-- A `cookies.txt` file exported from your browser while logged into YouTube (Netscape format)
+- A `cookies.txt` file exported from your browser while logged into YouTube (Netscape format), only if restricted videos must be supported
 - A residential proxy for YouTube on server IPs, configured with `YTDLP_PROXY`
+- Deno 2.3+ or Node.js 22+ on the Windows PC when using the cookie-update script
 
 ### Running
 
@@ -50,22 +51,38 @@ grab.yourdomain.com {
 
 ## Cookie Maintenance
 
-YouTube cookies expire periodically. To check if your cookies are still valid:
+Public YouTube downloads are attempted without account cookies first. Cookies are only used as a fallback for content that requires a signed-in account.
+
+YouTube rotates cookies from normal browser sessions. For the most durable export, follow the [yt-dlp YouTube cookie guidance](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies):
+
+1. Open one private Firefox window and sign in to YouTube.
+2. In that same tab, open `https://www.youtube.com/robots.txt`.
+3. Export the `youtube.com` cookies in Netscape format with a trusted local-only cookie exporter.
+4. Close the private window and do not reopen that session.
+5. Upload and deploy the export:
+
+```powershell
+.\scripts\update-youtube-cookies.ps1 -CookieFile "$env:USERPROFILE\Downloads\youtube.com_cookies.txt"
+```
+
+The script validates that an audio format is available, uploads only the filtered YouTube cookies, triggers deployment, waits for GitHub Actions, and reports the server-side validation result.
+
+To check a server-side cookie file manually:
 
 ```bash
 cp cookies.txt /tmp/grab-cookies-test.txt
-yt-dlp --cookies /tmp/grab-cookies-test.txt --js-runtimes node --skip-download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+yt-dlp --cookies /tmp/grab-cookies-test.txt --js-runtimes deno --simulate --format "bestaudio/best" "https://www.youtube.com/watch?v=46KnYh3PYNA"
 ```
 
 Re-export cookies from your browser and replace `cookies.txt` on the server when they expire.
 
-You can also refresh cookies directly from your local browser profile and upload them through GitHub Actions without committing them:
+For a quick refresh, the script can snapshot cookies directly from your normal local Firefox profile and upload them through GitHub Actions without committing them:
 
 ```powershell
 .\scripts\update-youtube-cookies.ps1
 ```
 
-Firefox is currently the default and most reliable local browser source on Windows. To choose a browser explicitly:
+Firefox is the default local browser source on Windows. These cookies may rotate again if the same signed-in browser session remains in use, so use the private-session export above when longevity matters. To choose a browser explicitly:
 
 ```powershell
 .\scripts\update-youtube-cookies.ps1 -Browser firefox
@@ -78,12 +95,12 @@ Chrome may fail with DPAPI/App-Bound cookie decryption errors. If you use a cook
 ```
 
 The script rejects empty, wrong-domain, anonymous, or signed-out YouTube cookie exports that only contain visitor cookies such as `PREF`, `SOCS`, `YSC`, or `VISITOR_INFO1_LIVE`; use a browser profile that is signed into YouTube.
-It also runs a local `yt-dlp` check and rejects exports that YouTube reports as rotated or invalid. Full-browser exports are filtered down to YouTube cookies before upload.
+It also runs a local `yt-dlp` audio-format check and rejects exports that YouTube reports as rotated or invalid. Full-browser exports are filtered down to YouTube cookies before upload.
 To test an export or browser profile without uploading anything, add `-ValidateOnly`.
 
 `cookies.txt` is intentionally ignored by Git. Production deploys read the `YOUTUBE_COOKIES_B64` GitHub Actions secret and write `cookies.txt` on the server during deployment.
 
-To refresh `yt-dlp` inside the Docker image, rebuild without cache:
+The deployment workflow rebuilds without cache every Sunday and whenever a deployment is triggered, so `yt-dlp` and its EJS scripts stay current. To refresh it manually:
 
 ```bash
 docker compose build --no-cache grab
@@ -106,4 +123,4 @@ docker compose up -d --build
 
 ## Deployment
 
-Pushes to `main` automatically deploy via GitHub Actions. The workflow SSHs into the server, pulls the latest code, and rebuilds the container.
+Pushes to `main` automatically deploy via GitHub Actions. The workflow runs the unit tests, SSHs into the server, performs a clean container build, and runs a server-side YouTube regression check before it passes.

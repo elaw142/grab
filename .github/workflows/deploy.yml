@@ -5,10 +5,29 @@ on:
   push:
     branches:
       - main
+  schedule:
+    - cron: "17 17 * * 0"
+
+concurrency:
+  group: grab-production-deploy
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
@@ -25,12 +44,17 @@ jobs:
             cd ~/grab
             git fetch --prune origin main
             git reset --hard origin/main
-            git clean -fd
+            git clean -fd -e cookies.txt -e instagram-cookies.txt
             if [ -n "${YOUTUBE_COOKIES_B64:-}" ]; then
               umask 077
               cookie_tmp="$(mktemp)"
               trap 'rm -f "$cookie_tmp"' EXIT
-              printf '%s' "$YOUTUBE_COOKIES_B64" | base64 -d > "$cookie_tmp"
+              if ! printf '%s' "$YOUTUBE_COOKIES_B64" | base64 -d > "$cookie_tmp"; then
+                echo "::error::YOUTUBE_COOKIES_B64 is not valid base64. Re-run scripts/update-youtube-cookies.ps1."
+                exit 1
+              fi
+              tr -d '\r' < "$cookie_tmp" > "${cookie_tmp}.lf"
+              mv "${cookie_tmp}.lf" "$cookie_tmp"
               cookie_names="$(awk 'NF >= 7 && ($1 !~ /^#/ || $1 ~ /^#HttpOnly_/) { print $6 }' "$cookie_tmp" | sort -u | tr '\n' ' ')"
               case " $cookie_names " in
                 *" LOGIN_INFO "*) ;;
@@ -50,7 +74,12 @@ jobs:
             if [ -n "${INSTAGRAM_COOKIES_B64:-}" ]; then
               umask 077
               ig_tmp="$(mktemp)"
-              printf '%s' "$INSTAGRAM_COOKIES_B64" | base64 -d > "$ig_tmp"
+              if ! printf '%s' "$INSTAGRAM_COOKIES_B64" | base64 -d > "$ig_tmp"; then
+                echo "::error::INSTAGRAM_COOKIES_B64 is not valid base64. Re-run scripts/update-instagram-cookies.ps1."
+                exit 1
+              fi
+              tr -d '\r' < "$ig_tmp" > "${ig_tmp}.lf"
+              mv "${ig_tmp}.lf" "$ig_tmp"
               cookie_names="$(awk 'NF >= 7 && ($1 !~ /^#/ || $1 ~ /^#HttpOnly_/) { print $6 }' "$ig_tmp" | sort -u | tr '\n' ' ')"
               case " $cookie_names " in
                 *" sessionid "*) ;;
@@ -59,4 +88,16 @@ jobs:
               mv "$ig_tmp" instagram-cookies.txt
               chmod 600 instagram-cookies.txt
             fi
-            docker compose up -d --build
+            docker compose build --pull --no-cache grab
+            docker compose up -d grab
+            docker compose exec -T grab yt-dlp --version
+            docker compose exec -T grab deno --version
+            docker compose exec -T grab python -m unittest discover -s tests -v
+            if [ -f cookies.txt ]; then
+              docker compose exec -T grab yt-dlp \
+                --cookies /app/cookies.txt \
+                --simulate \
+                --no-playlist \
+                --format 'bestaudio/best' \
+                'https://www.youtube.com/watch?v=46KnYh3PYNA'
+            fi

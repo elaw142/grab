@@ -3,6 +3,8 @@ param(
     [string]$Repo = "elaw142/grab",
     [string]$Workflow = "deploy.yml",
     [string]$Browser = "firefox",
+    [string]$ValidationUrl = "https://www.youtube.com/watch?v=46KnYh3PYNA",
+    [switch]$NoWait,
     [switch]$ValidateOnly
 )
 
@@ -43,6 +45,88 @@ function Invoke-YtDlpCapture {
         ExitCode = $exitCode
         Output   = @($output | ForEach-Object { $_.ToString() })
     }
+}
+
+function Get-YtDlpJsRuntimeArguments {
+    $deno = Get-Command deno -ErrorAction SilentlyContinue
+    if ($deno) {
+        return @("--js-runtimes", "deno:$($deno.Source)")
+    }
+
+    $node = Get-Command node -ErrorAction SilentlyContinue
+    if ($node) {
+        $versionOutput = & $node.Source --version
+        if ($LASTEXITCODE -eq 0 -and $versionOutput -match '^v(?<major>\d+)' -and
+            [int]$Matches.major -ge 22) {
+            return @("--js-runtimes", "node:$($node.Source)")
+        }
+    }
+
+    throw "YouTube cookie validation requires Deno 2.3+ or Node.js 22+. Install one of them, open a new PowerShell window, and try again."
+}
+
+function Invoke-GhCapture {
+    param([string[]]$Arguments)
+
+    if (!(Get-Command gh -ErrorAction SilentlyContinue)) {
+        throw "GitHub CLI (gh) is required. Install it, run 'gh auth login', and try again."
+    }
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
+    try {
+        $output = & gh @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    $lines = @($output | ForEach-Object { $_.ToString() })
+    if ($exitCode -ne 0) {
+        $lines | ForEach-Object { Write-Output $_ }
+        throw "gh $($Arguments[0]) failed with exit code $exitCode"
+    }
+
+    $lines
+}
+
+function Wait-ForWorkflowRun {
+    param(
+        [string]$Repository,
+        [string]$WorkflowFile,
+        [datetime]$DispatchedAfter
+    )
+
+    $run = $null
+    for ($attempt = 0; $attempt -lt 30 -and !$run; $attempt++) {
+        Start-Sleep -Seconds 2
+        $json = Invoke-GhCapture -Arguments @(
+            "run", "list",
+            "--repo", $Repository,
+            "--workflow", $WorkflowFile,
+            "--event", "workflow_dispatch",
+            "--limit", "10",
+            "--json", "databaseId,createdAt,url"
+        )
+        $runs = @(($json -join "`n") | ConvertFrom-Json)
+        $run = $runs |
+            Where-Object { ([datetime]$_.createdAt).ToUniversalTime() -ge $DispatchedAfter.ToUniversalTime() } |
+            Sort-Object { [datetime]$_.createdAt } -Descending |
+            Select-Object -First 1
+    }
+
+    if (!$run) {
+        throw "The workflow was dispatched, but its run did not appear within 60 seconds. Check https://github.com/$Repository/actions"
+    }
+
+    Write-Host "Watching deployment: $($run.url)"
+    Invoke-GhCapture -Arguments @(
+        "run", "watch", "$($run.databaseId)",
+        "--repo", $Repository,
+        "--exit-status"
+    ) | ForEach-Object { Write-Output $_ }
 }
 
 function Test-CookieDataLine {
@@ -111,11 +195,19 @@ function Copy-YoutubeCookies {
         }
     }
 
-    @(
+    $outputLines = @(
         "# Netscape HTTP Cookie File"
         "# This file was filtered by grab/scripts/update-youtube-cookies.ps1"
         ""
-    ) + $cookieLines | Set-Content -LiteralPath $Destination -Encoding ascii
+    ) + $cookieLines
+
+    # The destination is consumed by Linux. Write ASCII without a BOM and use
+    # LF line endings even when this script runs in Windows PowerShell 5.1.
+    [IO.File]::WriteAllText(
+        $Destination,
+        (($outputLines -join "`n") + "`n"),
+        [Text.Encoding]::ASCII
+    )
 }
 
 function Assert-YoutubeAuthCookies {
@@ -139,19 +231,22 @@ function Assert-YoutubeAuthCookies {
 }
 
 function Assert-YoutubeAcceptsCookies {
-    param([string]$Path)
+    param(
+        [string]$Path,
+        [string]$Url
+    )
 
     $validationCookieFile = New-TemporaryFile
 
     try {
         Copy-Item -LiteralPath $Path -Destination $validationCookieFile -Force
-        $result = Invoke-YtDlpCapture -Arguments @(
+        $result = Invoke-YtDlpCapture -Arguments @($script:YtDlpJsRuntimeArguments + @(
             "--cookies", $validationCookieFile,
-            "--ignore-no-formats-error",
-            "--skip-download",
+            "--simulate",
             "--no-playlist",
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        )
+            "--format", "bestaudio/best",
+            $Url
+        ))
 
         $output = $result.Output -join "`n"
         if ($output -match "provided YouTube account cookies are no longer valid" -or
@@ -174,6 +269,7 @@ $cookieFileProvided = $PSBoundParameters.ContainsKey("CookieFile") -and $CookieF
 $browserProvided = $PSBoundParameters.ContainsKey("Browser")
 $useBrowserExport = $Browser -and (!$cookieFileProvided -or $browserProvided)
 $deleteCookieFile = $false
+$script:YtDlpJsRuntimeArguments = @(Get-YtDlpJsRuntimeArguments)
 
 if ($useBrowserExport) {
     if (!$CookieFile) {
@@ -181,13 +277,14 @@ if ($useBrowserExport) {
         $deleteCookieFile = $true
     }
 
-    Invoke-YtDlp @(
+    Invoke-YtDlp @($script:YtDlpJsRuntimeArguments + @(
         "--cookies-from-browser", $Browser,
         "--cookies", $CookieFile,
-        "--ignore-no-formats-error",
-        "--skip-download",
-        "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    )
+        "--simulate",
+        "--no-playlist",
+        "--format", "bestaudio/best",
+        $ValidationUrl
+    ))
 
     $browserCookie = Get-Item -LiteralPath $CookieFile -ErrorAction SilentlyContinue
     if (!$browserCookie -or $browserCookie.Length -lt 100) {
@@ -203,7 +300,7 @@ if (!(Test-Path -LiteralPath $CookieFile)) {
 $uploadCookieFile = New-TemporaryFile
 Copy-YoutubeCookies -Source $CookieFile -Destination $uploadCookieFile
 Assert-YoutubeAuthCookies -Path $uploadCookieFile
-Assert-YoutubeAcceptsCookies -Path $uploadCookieFile
+Assert-YoutubeAcceptsCookies -Path $uploadCookieFile -Url $ValidationUrl
 
 if ($ValidateOnly) {
     Write-Host "Cookie validation passed. Nothing uploaded because -ValidateOnly was set."
@@ -216,10 +313,22 @@ if ($ValidateOnly) {
 
 try {
     $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($uploadCookieFile))
-    gh secret set YOUTUBE_COOKIES_B64 --repo $Repo --body $b64
-    gh workflow run $Workflow --repo $Repo
+    $dispatchTime = [datetime]::UtcNow.AddSeconds(-5)
+    Invoke-GhCapture -Arguments @(
+        "secret", "set", "YOUTUBE_COOKIES_B64",
+        "--repo", $Repo,
+        "--body", $b64
+    ) | ForEach-Object { Write-Output $_ }
+    Invoke-GhCapture -Arguments @(
+        "workflow", "run", $Workflow,
+        "--repo", $Repo
+    ) | ForEach-Object { Write-Output $_ }
 
     Write-Host "Updated YOUTUBE_COOKIES_B64 and triggered $Workflow for $Repo."
+    if (!$NoWait) {
+        Wait-ForWorkflowRun -Repository $Repo -WorkflowFile $Workflow -DispatchedAfter $dispatchTime
+        Write-Host "Cookie upload, deployment, and server-side YouTube validation passed."
+    }
 }
 finally {
     Remove-Item -LiteralPath $uploadCookieFile -Force -ErrorAction SilentlyContinue
