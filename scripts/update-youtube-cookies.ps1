@@ -110,7 +110,8 @@ function Wait-ForWorkflowRun {
             "--limit", "10",
             "--json", "databaseId,createdAt,url"
         )
-        $runs = @(($json -join "`n") | ConvertFrom-Json)
+        # PS 5.1's ConvertFrom-Json emits a JSON array as one object; ForEach-Object unrolls it.
+        $runs = @(($json -join "`n") | ConvertFrom-Json | ForEach-Object { $_ })
         $run = $runs |
             Where-Object { ([datetime]$_.createdAt).ToUniversalTime() -ge $DispatchedAfter.ToUniversalTime() } |
             Sort-Object { [datetime]$_.createdAt } -Descending |
