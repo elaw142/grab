@@ -104,3 +104,16 @@ jobs:
                 --format 'bestaudio/best' \
                 'https://www.youtube.com/watch?v=46KnYh3PYNA'
             fi
+
+      - name: Notify phone
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -fsS \
+            -H "Title: grab" \
+            -H "Priority: high" \
+            -H "Click: $RUN_URL" \
+            -d "⚠️ Deploy failed. Tap to see the run." \
+            "https://ntfy.sh/$NTFY_TOPIC"

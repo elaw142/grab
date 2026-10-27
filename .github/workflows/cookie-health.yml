@@ -1,0 +1,51 @@
+name: Cookie health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 20 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check YouTube cookies on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: opc
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -u
+            cd ~/grab
+            if [ ! -f cookies.txt ]; then
+              echo "::error::cookies.txt is missing on the server"
+              exit 1
+            fi
+            out="$(docker compose exec -T grab yt-dlp --cookies /app/cookies.txt \
+              --simulate --no-playlist --format 'bestaudio/best' \
+              'https://www.youtube.com/watch?v=46KnYh3PYNA' 2>&1)"
+            status=$?
+            echo "$out"
+            # yt-dlp falls back to anonymous access when cookies are stale, so a zero exit is not enough.
+            if [ $status -ne 0 ] || echo "$out" | grep -qE 'no longer valid|Sign in to confirm'; then
+              echo "::error::YouTube rejected the server's cookies"
+              exit 1
+            fi
+
+      - name: Notify phone
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -fsS \
+            -H "Title: grab" \
+            -H "Priority: high" \
+            -H "Click: $RUN_URL" \
+            -d "🚨 Server YouTube cookies rejected. Sign into YouTube in Firefox, then run scripts\update-youtube-cookies.ps1" \
+            "https://ntfy.sh/$NTFY_TOPIC"
